@@ -151,10 +151,6 @@ export function Booking() {
     );
   }
 
-  const handleInputChange = (field, value) => {
-    setBookingData(prev => ({ ...prev, [field]: value }));
-  };
-
   return (
     <div className="min-h-screen bg-muted/30 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
