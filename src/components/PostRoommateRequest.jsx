@@ -12,6 +12,7 @@ import { Badge } from './ui/badge';
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useAuth } from '../App';
+import apiService from '../services/api';
 import { 
   Calendar as CalendarIcon,
   MapPin,
@@ -31,6 +32,9 @@ export function PostRoommateRequest() {
   const [moveInDate, setMoveInDate] = useState();
   const [newInterest, setNewInterest] = useState('');
   const [profileImage, setProfileImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -125,11 +129,57 @@ export function PostRoommateRequest() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would make an API call
-    alert('Roommate request posted successfully!');
-    navigate('/roommates');
+    
+    if (!termsAccepted) {
+      setError('Please accept the terms of service to continue.');
+      return;
+    }
+
+    if (!formData.title.trim() || !formData.bio.trim() || !formData.location.trim()) {
+      setError('Please fill in all required fields (title, bio, and location).');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Prepare the data for the API
+      const requestData = {
+        title: formData.title,
+        bio: formData.bio,
+        location: formData.location,
+        preferredAreas: formData.preferredAreas,
+        budget: {
+          min: formData.budget[0],
+          max: formData.budget[1]
+        },
+        roomType: formData.roomType || 'Private Room',
+        moveInDate: moveInDate || new Date(),
+        lifestyle: formData.lifestyle,
+        interests: formData.interests,
+        idealRoommate: formData.idealRoommate,
+        dealBreakers: formData.dealBreakers,
+        contactPreference: formData.contactPreference,
+        profileImage: profileImage || ''
+      };
+
+      const result = await apiService.createRoommateRequest(requestData);
+      
+      if (result.success) {
+        alert('Roommate request posted successfully!');
+        navigate('/roommates');
+      } else {
+        setError(result.message || 'Failed to post roommate request. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error posting roommate request:', error);
+      setError('Failed to post roommate request. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -519,18 +569,28 @@ export function PostRoommateRequest() {
           </Card>
 
           {/* Submit */}
+          {error && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
+              {error}
+            </div>
+          )}
+
           <div className="flex items-center space-x-2">
-            <input type="checkbox" required />
+            <input 
+              type="checkbox" 
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+            />
             <p className="text-sm text-muted-foreground">
               I agree to the <a href="#" className="text-primary underline">Terms of Service</a> and confirm that all information provided is accurate.
             </p>
           </div>
 
           <div className="flex space-x-4">
-            <Button type="submit" className="flex-1">
-              Post Roommate Request
+            <Button type="submit" className="flex-1" disabled={isLoading}>
+              {isLoading ? 'Posting...' : 'Post Roommate Request'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => navigate('/roommates')}>
+            <Button type="button" variant="outline" onClick={() => navigate('/roommates')} disabled={isLoading}>
               Cancel
             </Button>
           </div>
