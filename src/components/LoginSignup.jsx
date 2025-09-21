@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useAuth } from '../App';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, AlertCircle } from 'lucide-react';
 
 export function LoginSignup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,49 +18,68 @@ export function LoginSignup() {
     phone: '',
     confirmPassword: ''
   });
-  const { login } = useAuth();
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { login, register } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Mock login - in real app, this would make an API call
-    const mockUser = {
-      id: 1,
-      name: 'John Doe',
-      email: loginData.email,
-      phone: '+44 7123 456789',
-      bio: 'Software developer looking for a quiet flatmate',
-      preferences: {
-        budget: [500, 1200],
-        location: 'London',
-        roomType: 'private'
+    setError('');
+    setIsLoading(true);
+    
+    try {
+      const result = await login({
+        email: loginData.email,
+        password: loginData.password
+      });
+      
+      if (result.success) {
+        navigate('/');
+      } else {
+        setError(result.message || 'Login failed');
       }
-    };
-    login(mockUser);
-    navigate('/');
+    } catch (error) {
+      setError(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
+    setError('');
+    
     if (signupData.password !== signupData.confirmPassword) {
-      alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
-    // Mock signup - in real app, this would make an API call
-    const mockUser = {
-      id: 1,
-      name: signupData.name,
-      email: signupData.email,
-      phone: signupData.phone,
-      bio: '',
-      preferences: {
-        budget: [500, 1200],
-        location: '',
-        roomType: 'private'
+    
+    if (signupData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await register({
+        name: signupData.name,
+        email: signupData.email,
+        password: signupData.password,
+        phone: signupData.phone
+      });
+      
+      if (result.success) {
+        navigate('/profile');
+      } else {
+        setError(result.message || 'Registration failed');
       }
-    };
-    login(mockUser);
-    navigate('/profile');
+    } catch (error) {
+      setError(error.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -83,6 +102,12 @@ export function LoginSignup() {
               </TabsList>
 
               <TabsContent value="login">
+                {error && (
+                  <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center space-x-2 text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm">{error}</span>
+                  </div>
+                )}
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -121,16 +146,22 @@ export function LoginSignup() {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full">
-                    Log In
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Logging in...' : 'Log In'}
                   </Button>
                   <p className="text-center text-sm text-muted-foreground">
-                    Use any email and password to demo login
+                    Try: john@example.com / password123
                   </p>
                 </form>
               </TabsContent>
 
               <TabsContent value="signup">
+                {error && (
+                  <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center space-x-2 text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm">{error}</span>
+                  </div>
+                )}
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
@@ -214,8 +245,8 @@ export function LoginSignup() {
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full">
-                    Sign Up
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Creating Account...' : 'Sign Up'}
                   </Button>
                 </form>
               </TabsContent>

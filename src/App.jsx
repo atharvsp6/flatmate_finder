@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Landing } from './components/Landing';
 import { LoginSignup } from './components/LoginSignup';
@@ -11,6 +11,7 @@ import { RoommatesListing } from './components/RoommatesListing';
 import { RoommateProfile } from './components/RoommateProfile';
 import { PostRoommateRequest } from './components/PostRoommateRequest';
 import { Navbar } from './components/Navbar';
+import apiService from './services/api';
 
 // Auth Context
 const AuthContext = createContext(undefined);
@@ -26,19 +27,96 @@ export const useAuth = () => {
 function App() {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (userData) => {
-    setUser(userData);
-    setIsAuthenticated(true);
+  // Check if user is already logged in on app start
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = apiService.getToken();
+        if (token) {
+          const response = await apiService.getCurrentUser();
+          if (response.success) {
+            setUser(response.user);
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        // If token is invalid, remove it
+        apiService.setToken(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const login = async (credentials) => {
+    try {
+      const response = await apiService.login(credentials);
+      if (response.success) {
+        setUser(response.user);
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+      return { success: false, message: response.message };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
+  const register = async (userData) => {
+    try {
+      const response = await apiService.register(userData);
+      if (response.success) {
+        setUser(response.user);
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+      return { success: false, message: response.message };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
   };
+
+  const logout = async () => {
+    try {
+      await apiService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated, 
+      login, 
+      register, 
+      logout, 
+      updateUser,
+      isLoading 
+    }}>
       <Router>
         <div className="min-h-screen bg-background">
           <Navbar />

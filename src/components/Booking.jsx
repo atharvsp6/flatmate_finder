@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -10,6 +10,7 @@ import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ImageWithFallback } from './assets/ImageWithFallback';
 import { useAuth } from '../App';
+import apiService from '../services/api';
 import { 
   Calendar as CalendarIcon,
   Clock,
@@ -19,7 +20,8 @@ import {
   Mail,
   MessageSquare,
   ArrowLeft,
-  CheckCircle
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -28,6 +30,10 @@ export function Booking() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [date, setDate] = useState();
+  const [listing, setListing] = useState(null);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState({
     viewingDate: '',
     viewingTime: '',
@@ -36,33 +42,114 @@ export function Booking() {
     moveInDate: ''
   });
 
-  // Mock listing data
-  const listing = {
-    id: parseInt(id || '1'),
-    title: "Modern 2-Bed Apartment in Central London",
-    location: "Camden, London",
-    price: 950,
-    image: "https://images.unsplash.com/photo-1559329146-807aff9ff1fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhcGFydG1lbnQlMjBleHRlcmlvcnxlbnwxfHx8fDE3NTY1NjczNzl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    landlord: {
-      name: "Sarah Wilson",
-      avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTY1Mzk3MjV8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-    }
-  };
+  useEffect(() => {
+    const fetchListing = async () => {
+      try {
+        if (!id) return;
+        
+        const response = await apiService.getListing(id);
+        if (response.success) {
+          setListing(response.data);
+        } else {
+          setError('Listing not found');
+        }
+      } catch (error) {
+        console.error('Failed to fetch listing:', error);
+        setError('Failed to load listing');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchListing();
+  }, [id]);
 
   const timeSlots = [
     "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would make an API call
-    alert('Booking request submitted successfully!');
-    navigate('/my-bookings');
+    setError('');
+    setIsSubmitting(true);
+
+    // Validation
+    if (!date) {
+      setError('Please select a viewing date');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!bookingData.viewingTime) {
+      setError('Please select a viewing time');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!bookingData.moveInDate) {
+      setError('Please select a move-in date');
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const bookingPayload = {
+        listing: id,
+        viewingDate: date.toISOString(),
+        viewingTime: bookingData.viewingTime,
+        moveInDate: new Date(bookingData.moveInDate).toISOString(),
+        message: bookingData.message,
+        phoneNumber: bookingData.phoneNumber
+      };
+
+      const response = await apiService.createBooking(bookingPayload);
+      
+      if (response.success) {
+        alert('Booking request submitted successfully!');
+        navigate('/my-bookings');
+      } else {
+        setError(response.message || 'Failed to create booking');
+      }
+    } catch (error) {
+      console.error('Failed to create booking:', error);
+      setError(error.message || 'Failed to create booking');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field, value) => {
     setBookingData(prev => ({ ...prev, [field]: value }));
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading listing...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !listing) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <p className="text-destructive">{error}</p>
+            <Button variant="outline" onClick={() => navigate(-1)} className="mt-4">
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30 py-8">
