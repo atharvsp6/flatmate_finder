@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+// import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { ImageWithFallback } from './assets/ImageWithFallback';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Progress } from './ui/progress';
 import { useAuth } from '../App';
+import apiService from '../services/api';
 import { 
   ArrowLeft,
   MapPin,
@@ -29,48 +31,51 @@ export function RoommateProfile() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
+  const [roommate, setRoommate] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock roommate data - in real app, would fetch based on ID
-  const roommate = {
-    id: parseInt(id || '1'),
-    name: "Anika Joshi",
-    age: 26,
-    occupation: "Software Engineer",
-    bio: "Friendly and easy-going professional looking for a clean, social flatmate. I love exploring local cafes, trekking in the Sahyadris on weekends, and hosting friends for movie nights. I work a hybrid schedule, so I'm home 2-3 days a week. Looking for someone who appreciates a tidy space but is also chill.",
-    avatar: "https://images.unsplash.com/photo-1607504622473-62981bf57d13?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaXZlcnNlJTIwcGVvcGxlJTIwcm9vbW1hdGVzfGVufDF8fHx8MTc1NjU2NzYwMnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    location: "Bandra, Mumbai",
-    preferredAreas: ["Andheri", "Juhu", "Powai", "Lower Parel"],
-    budget: [25000, 40000], // Budget in INR
-    moveInDate: "2025-09-15",
-    roomType: "Private Room",
-    lifestyle: {
-      cleanliness: 4,
-      socialLevel: 4,
-      smoking: false,
-      pets: false,
-      workSchedule: "Hybrid schedule (3 days in office)",
-      sleepSchedule: "Night owl (asleep by 1am)"
-    },
-    interests: ["Cooking", "Trekking", "Reading", "Bollywood Movies", "Photography", "Exploring Street Food"],
-    languages: ["Marathi (Native)", "Hindi (Fluent)", "English (Fluent)"],
-    rating: 4.8,
-    responseRate: 95,
-    lastActive: "2 hours ago",
-    verified: true,
-    verifications: {
-      email: true,
-      phone: true,
-      id: true, // Aadhaar/PAN verified
-      workEmail: true
-    },
-    postedDate: "2025-08-20",
-    memberSince: "2024-08-15",
-    photos: [
-      "https://images.unsplash.com/photo-1607504622473-62981bf57d13?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaXZlcnNlJTIwcGVvcGxlJTIwcm9vbW1hdGVzfGVufDF8fHx8MTc1NjU2NzYwMnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-    ],
-    idealRoommate: "Someone who's clean, respectful, and enjoys socializing occasionally. I'd love to share meals or watch a cricket match together but also respect each other's personal space.",
-    dealBreakers: ["Heavy smoking", "Excessive messiness", "Not contributing to household chores"]
-  };
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    apiService.getRoommateRequest(id)
+      .then(res => {
+        if (res.success && res.data) {
+          setRoommate(res.data);
+        } else {
+          setError('Roommate not found');
+        }
+      })
+      .catch(() => setError('Roommate not found'))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  // Build a view model from API shape (RoommateRequest)
+  const vm = useMemo(() => {
+    if (!roommate) return null;
+    const dealBreakersArray = Array.isArray(roommate.dealBreakers)
+      ? roommate.dealBreakers
+      : (roommate.dealBreakers ? String(roommate.dealBreakers).split(',').map(s => s.trim()).filter(Boolean) : []);
+    return {
+      name: roommate.user?.name || 'Roommate',
+      location: roommate.location || '',
+      avatar: roommate.profileImage || roommate.user?.avatar || '',
+      bio: roommate.bio || '',
+      budgetMin: roommate.budget?.min ?? null,
+      budgetMax: roommate.budget?.max ?? null,
+      moveInDate: roommate.moveInDate || null,
+      roomType: roommate.roomType || '',
+      preferredAreas: roommate.preferredAreas || [],
+      interests: roommate.interests || [],
+      lifestyle: roommate.lifestyle || { cleanliness: 3, socialLevel: 3, smoking: false, pets: false, workSchedule: 'flexible', sleepSchedule: 'flexible' },
+      idealRoommate: roommate.idealRoommate || '',
+      dealBreakers: dealBreakersArray,
+      memberSince: roommate.createdAt || null
+    };
+  }, [roommate]);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (error || !vm) return <div className="min-h-screen flex items-center justify-center text-red-500">{error || 'Roommate not found'}</div>;
 
   const reviews = [
     {
@@ -133,14 +138,13 @@ export function RoommateProfile() {
             <Card className="mb-6">
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row items-start gap-6">
-                  <div className="relative">
-                    <Avatar className="h-32 w-32">
-                      <AvatarImage src={roommate.avatar} />
-                      <AvatarFallback className="text-2xl">
-                        {roommate.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    {roommate.verified && (
+                  <div className="relative h-32 w-32 rounded-full overflow-hidden">
+                    <ImageWithFallback
+                      src={vm.avatar || '/default-avatar.svg'}
+                      alt={vm.name}
+                      className="h-full w-full object-cover"
+                    />
+                    {roommate?.verified && (
                       <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center">
                         <Shield className="h-4 w-4" />
                       </div>
@@ -150,11 +154,17 @@ export function RoommateProfile() {
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h1 className="text-3xl font-medium text-foreground">{roommate.name}</h1>
-                        <p className="text-lg text-muted-foreground">{roommate.age} years old • {roommate.occupation}</p>
+                        <h1 className="text-3xl font-medium text-foreground">{vm.name}</h1>
+                        {(roommate?.age || roommate?.occupation) && (
+                          <p className="text-lg text-muted-foreground">
+                            {roommate?.age ? `${roommate.age} years old` : ''}
+                            {roommate?.age && roommate?.occupation ? ' • ' : ''}
+                            {roommate?.occupation ?? ''}
+                          </p>
+                        )}
                         <div className="flex items-center text-muted-foreground mt-2">
                           <MapPin className="h-4 w-4 mr-1" />
-                          <span>{roommate.location}</span>
+                          <span>{vm.location}</span>
                         </div>
                       </div>
                       <Button
@@ -171,28 +181,28 @@ export function RoommateProfile() {
                       <div className="text-center">
                         <div className="flex items-center justify-center mb-1">
                           <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                          <span className="font-medium">{roommate.rating}</span>
+                          <span className="font-medium">{roommate?.rating ?? '—'}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">Rating</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-medium">{roommate.responseRate}%</p>
+                        <p className="font-medium">{roommate?.responseRate != null ? `${roommate.responseRate}%` : '—'}</p>
                         <p className="text-xs text-muted-foreground">Response Rate</p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center">
                           <Clock className="h-4 w-4 mr-1 text-green-500" />
-                          <span className="font-medium text-green-600">{roommate.lastActive}</span>
+                          <span className="font-medium text-green-600">{roommate?.lastActive ? new Date(roommate.lastActive).toLocaleString() : '—'}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">Last Active</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-medium">{formatMemberSince(roommate.memberSince)}</p>
+                        <p className="font-medium">{vm.memberSince ? formatMemberSince(vm.memberSince) : '—'}</p>
                         <p className="text-xs text-muted-foreground">Member Since</p>
                       </div>
                     </div>
 
-                    <p className="text-muted-foreground">{roommate.bio}</p>
+                    <p className="text-muted-foreground">{vm.bio}</p>
                   </div>
                 </div>
               </CardContent>
@@ -216,7 +226,7 @@ export function RoommateProfile() {
                       <div>
                         <p className="font-medium mb-2">Budget Range</p>
                         <p className="text-2xl font-medium text-foreground">
-                          ₹{roommate.budget[0]} - ₹{roommate.budget[1]}
+                          ₹{vm.budgetMin ?? '—'} - ₹{vm.budgetMax ?? '—'}
                           <span className="text-base text-muted-foreground">/month</span>
                         </p>
                       </div>
@@ -224,20 +234,20 @@ export function RoommateProfile() {
                         <p className="font-medium mb-2">Move-in Date</p>
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 mr-2" />
-                          <span>{formatMoveInDate(roommate.moveInDate)}</span>
+                          <span>{vm.moveInDate ? formatMoveInDate(vm.moveInDate) : '—'}</span>
                         </div>
                       </div>
                     </div>
                     
                     <div>
                       <p className="font-medium mb-2">Room Type</p>
-                      <Badge variant="outline">{roommate.roomType}</Badge>
+                      <Badge variant="outline">{vm.roomType}</Badge>
                     </div>
 
                     <div>
                       <p className="font-medium mb-2">Preferred Areas</p>
                       <div className="flex flex-wrap gap-2">
-                        {roommate.preferredAreas.map((area) => (
+                        {vm.preferredAreas.map((area) => (
                           <Badge key={area} variant="secondary">{area}</Badge>
                         ))}
                       </div>
@@ -253,7 +263,7 @@ export function RoommateProfile() {
                     <div>
                       <p className="font-medium mb-2">Interests</p>
                       <div className="flex flex-wrap gap-2">
-                        {roommate.interests.map((interest) => (
+                        {vm.interests.map((interest) => (
                           <Badge key={interest} variant="secondary">{interest}</Badge>
                         ))}
                       </div>
@@ -262,9 +272,7 @@ export function RoommateProfile() {
                     <div>
                       <p className="font-medium mb-2">Languages</p>
                       <div className="space-y-1">
-                        {roommate.languages.map((language) => (
-                          <p key={language} className="text-muted-foreground">{language}</p>
-                        ))}
+                        <p className="text-muted-foreground">—</p>
                       </div>
                     </div>
                   </CardContent>
@@ -277,18 +285,21 @@ export function RoommateProfile() {
                   <CardContent className="space-y-4">
                     <div>
                       <p className="font-medium mb-2">Ideal Roommate</p>
-                      <p className="text-muted-foreground">{roommate.idealRoommate}</p>
+                      <p className="text-muted-foreground">{roommate?.idealRoommate || '—'}</p>
                     </div>
                     
                     <div>
                       <p className="font-medium mb-2">Deal Breakers</p>
                       <ul className="space-y-1">
-                        {roommate.dealBreakers.map((item, index) => (
+                        {vm.dealBreakers.map((item, index) => (
                           <li key={index} className="text-muted-foreground flex items-center">
                             <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
                             {item}
                           </li>
                         ))}
+                        {vm.dealBreakers.length === 0 && (
+                          <li className="text-muted-foreground">—</li>
+                        )}
                       </ul>
                     </div>
                   </CardContent>
@@ -304,24 +315,24 @@ export function RoommateProfile() {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <p className="font-medium">Cleanliness Level</p>
-                        <span className="text-sm text-muted-foreground">{roommate.lifestyle.cleanliness}/5</span>
+                        <span className="text-sm text-muted-foreground">{vm.lifestyle.cleanliness}/5</span>
                       </div>
-                      <Progress value={roommate.lifestyle.cleanliness * 20} className="h-2" />
+                      <Progress value={vm.lifestyle.cleanliness * 20} className="h-2" />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {roommate.lifestyle.cleanliness >= 4 ? 'Very clean and organized' : 
-                         roommate.lifestyle.cleanliness >= 3 ? 'Generally tidy' : 'Relaxed about cleanliness'}
+                        {vm.lifestyle.cleanliness >= 4 ? 'Very clean and organized' : 
+                         vm.lifestyle.cleanliness >= 3 ? 'Generally tidy' : 'Relaxed about cleanliness'}
                       </p>
                     </div>
 
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <p className="font-medium">Social Level</p>
-                        <span className="text-sm text-muted-foreground">{roommate.lifestyle.socialLevel}/5</span>
+                        <span className="text-sm text-muted-foreground">{vm.lifestyle.socialLevel}/5</span>
                       </div>
-                      <Progress value={roommate.lifestyle.socialLevel * 20} className="h-2" />
+                      <Progress value={vm.lifestyle.socialLevel * 20} className="h-2" />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {roommate.lifestyle.socialLevel >= 4 ? 'Very social and outgoing' : 
-                         roommate.lifestyle.socialLevel >= 3 ? 'Moderately social' : 'Prefers quiet environment'}
+                        {vm.lifestyle.socialLevel >= 4 ? 'Very social and outgoing' : 
+                         vm.lifestyle.socialLevel >= 3 ? 'Moderately social' : 'Prefers quiet environment'}
                       </p>
                     </div>
 
@@ -331,8 +342,8 @@ export function RoommateProfile() {
                           <Cigarette className="h-4 w-4 mr-2" />
                           <span>Smoking</span>
                         </div>
-                        <span className={roommate.lifestyle.smoking ? 'text-yellow-600' : 'text-green-600'}>
-                          {roommate.lifestyle.smoking ? 'Yes' : 'No'}
+                        <span className={vm.lifestyle.smoking ? 'text-yellow-600' : 'text-green-600'}>
+                          {vm.lifestyle.smoking ? 'Yes' : 'No'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -340,8 +351,8 @@ export function RoommateProfile() {
                           <PawPrint className="h-4 w-4 mr-2" />
                           <span>Pets</span>
                         </div>
-                        <span className={roommate.lifestyle.pets ? 'text-blue-600' : 'text-muted-foreground'}>
-                          {roommate.lifestyle.pets ? 'Has pets' : 'No pets'}
+                        <span className={vm.lifestyle.pets ? 'text-blue-600' : 'text-muted-foreground'}>
+                          {vm.lifestyle.pets ? 'Has pets' : 'No pets'}
                         </span>
                       </div>
                     </div>
@@ -349,11 +360,11 @@ export function RoommateProfile() {
                     <div className="space-y-3">
                       <div>
                         <p className="font-medium mb-1">Work Schedule</p>
-                        <p className="text-muted-foreground">{roommate.lifestyle.workSchedule}</p>
+                        <p className="text-muted-foreground">{vm.lifestyle.workSchedule}</p>
                       </div>
                       <div>
                         <p className="font-medium mb-1">Sleep Schedule</p>
-                        <p className="text-muted-foreground">{roommate.lifestyle.sleepSchedule}</p>
+                        <p className="text-muted-foreground">{vm.lifestyle.sleepSchedule}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -434,7 +445,7 @@ export function RoommateProfile() {
                       <Mail className="h-4 w-4 mr-2" />
                       <span className="text-sm">Email</span>
                     </div>
-                    {roommate.verifications.email ? (
+                    {roommate?.verifications?.email ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
                       <span className="text-xs text-muted-foreground">Pending</span>
@@ -445,7 +456,7 @@ export function RoommateProfile() {
                       <Phone className="h-4 w-4 mr-2" />
                       <span className="text-sm">Phone</span>
                     </div>
-                    {roommate.verifications.phone ? (
+                    {roommate?.verifications?.phone ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
                       <span className="text-xs text-muted-foreground">Pending</span>
@@ -456,7 +467,7 @@ export function RoommateProfile() {
                       <User className="h-4 w-4 mr-2" />
                       <span className="text-sm">ID Verification</span>
                     </div>
-                    {roommate.verifications.id ? (
+                    {roommate?.verifications?.id ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
                       <span className="text-xs text-muted-foreground">Pending</span>
@@ -467,7 +478,7 @@ export function RoommateProfile() {
                       <Home className="h-4 w-4 mr-2" />
                       <span className="text-sm">Work Email</span>
                     </div>
-                    {roommate.verifications.workEmail ? (
+                    {roommate?.verifications?.workEmail ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
                       <span className="text-xs text-muted-foreground">Pending</span>
@@ -486,19 +497,19 @@ export function RoommateProfile() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Response Rate</span>
-                    <span className="font-medium">{roommate.responseRate}%</span>
+                    <span className="font-medium">{roommate?.responseRate != null ? `${roommate.responseRate}%` : '—'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Average Rating</span>
                     <div className="flex items-center">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
-                      <span className="font-medium">{roommate.rating}</span>
+                      <span className="font-medium">{roommate?.rating ?? '—'}</span>
                     </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Posted</span>
                     <span className="font-medium">
-                      {new Date(roommate.postedDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
+                      {roommate?.postedDate ? new Date(roommate.postedDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) : '—'}
                     </span>
                   </div>
                 </div>

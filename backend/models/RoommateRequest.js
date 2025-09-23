@@ -100,6 +100,33 @@ const roommateRequestSchema = new mongoose.Schema({
     type: String, // URL to profile image
     default: ''
   },
+  // Optional metrics for UI display
+  rating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: null
+  },
+  responseRate: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: null
+  },
+  lastActive: {
+    type: Date,
+    default: null
+  },
+  verifications: {
+    email: { type: Boolean, default: false },
+    phone: { type: Boolean, default: false },
+    id: { type: Boolean, default: false },
+    workEmail: { type: Boolean, default: false }
+  },
+  postedDate: {
+    type: Date,
+    default: Date.now
+  },
   isActive: {
     type: Boolean,
     default: true

@@ -126,7 +126,12 @@ const roommateRequests = [
     interests: ['reading', 'cooking', 'movies', 'fitness'],
     idealRoommate: 'Someone who is clean, respectful, and has similar interests',
     dealBreakers: 'Smoking, loud parties, pets',
-    contactPreference: 'both'
+    contactPreference: 'both',
+    rating: 4.8,
+    responseRate: 95,
+    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    verifications: { email: true, phone: true, id: true, workEmail: true },
+    postedDate: new Date('2024-08-20')
   }
 ];
 
