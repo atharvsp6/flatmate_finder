@@ -28,6 +28,9 @@ A full-stack web application for finding flatmates and room rentals, built with 
 - **Role-based Access**: User and admin roles
 - **Search & Filters**: Advanced filtering for listings and roommates
 
+## Live deployment link:
+frontend : https://stayshare-flatmatefinder.netlify.app/
+backend  : https://flatmate-finder-0bu1.onrender.com 
 ## 🛠️ Setup Instructions
 
 ### Prerequisites

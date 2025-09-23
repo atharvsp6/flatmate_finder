@@ -61,9 +61,13 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, curl, Postman, same-origin)
     if (!origin) return callback(null, true);
 
-    // Normalize and check against allowed list and regex for localhost ports
+    // Support multiple comma-separated URLs in FRONTEND_URL
+    const envUrls = process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+      : ['http://localhost:3000'];
+
     const explicitAllowed = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
+      ...envUrls,
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5173',
