@@ -12,6 +12,7 @@ import { Badge } from './ui/badge';
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useAuth } from '../App';
+import apiService from '../services/api';
 import { 
   Calendar as CalendarIcon,
   MapPin,
@@ -45,14 +46,18 @@ export function PostRoommateRequest() {
       socialLevel: 3,
       smoking: false,
       pets: false,
-      workSchedule: '',
-      sleepSchedule: ''
+      // Align with backend enums in RoommateRequest model
+      workSchedule: '9-5',
+      sleepSchedule: 'flexible'
     },
     interests: [],
     idealRoommate: '',
     dealBreakers: '',
     contactPreference: 'both'
   });
+
+  // Control the move-in date popover to ensure it opens inside forms
+  const [moveInOpen, setMoveInOpen] = useState(false);
 
   const londonAreas = [
     'Camden', 'Shoreditch', 'King\'s Cross', 'Clapham', 'Canary Wharf', 
@@ -125,11 +130,61 @@ export function PostRoommateRequest() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would make an API call
-    alert('Roommate request posted successfully!');
-    navigate('/roommates');
+    try {
+      // Transform slider budget [min,max] into object {min,max}
+      const payload = {
+        title: formData.title,
+        bio: formData.bio,
+        location: formData.location,
+        preferredAreas: formData.preferredAreas,
+        budget: { min: formData.budget[0], max: formData.budget[1] },
+        // Map UI values to backend enum values
+        roomType: (
+          formData.roomType === 'private' ? 'Private Room' :
+          formData.roomType === 'shared' ? 'Shared Room' :
+          formData.roomType === 'studio' ? 'Studio' :
+          formData.roomType === 'entire' ? 'Entire Place' : ''
+        ),
+        moveInDate: formData.moveInDate,
+        lifestyle: formData.lifestyle,
+        interests: formData.interests,
+        idealRoommate: formData.idealRoommate,
+        dealBreakers: formData.dealBreakers,
+        contactPreference: formData.contactPreference,
+      };
+
+      // Basic client-side checks to avoid obvious validation errors
+      if (!payload.title || payload.title.length < 5) {
+        throw new Error('Title must be at least 5 characters');
+      }
+      if (!payload.bio || payload.bio.length < 10) {
+        throw new Error('Bio must be at least 10 characters');
+      }
+      if (!payload.location) {
+        throw new Error('Location is required');
+      }
+      if (!payload.roomType) {
+        throw new Error('Please select a room type');
+      }
+      if (!payload.moveInDate) {
+        throw new Error('Please pick a move-in date');
+      }
+
+      const res = await apiService.createRoommateRequest(payload);
+      if (res.success) {
+        alert('Roommate request posted successfully!');
+        navigate('/roommates');
+      }
+    } catch (err) {
+      // Surface backend validation messages if available
+      if (err && err.errors && Array.isArray(err.errors)) {
+        alert('Validation failed:\n' + err.errors.map(e => `- ${e.field}: ${e.message}`).join('\n'));
+      } else {
+        alert(err.message || 'Failed to post roommate request');
+      }
+    }
   };
 
   return (
@@ -233,7 +288,7 @@ export function PostRoommateRequest() {
                       <SelectItem value="private">Private Room</SelectItem>
                       <SelectItem value="shared">Shared Room</SelectItem>
                       <SelectItem value="studio">Studio</SelectItem>
-                      <SelectItem value="flexible">Flexible</SelectItem>
+                      <SelectItem value="entire">Entire Place</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -285,9 +340,10 @@ export function PostRoommateRequest() {
 
               <div className="space-y-2">
                 <Label>Move-in Date</Label>
-                <Popover>
+                <Popover open={moveInOpen} onOpenChange={setMoveInOpen}>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full justify-start text-left font-normal"
                     >
@@ -302,14 +358,33 @@ export function PostRoommateRequest() {
                       onSelect={(selectedDate) => {
                         setMoveInDate(selectedDate);
                         if (selectedDate) {
-                          handleInputChange('moveInDate', format(selectedDate, 'yyyy-MM-dd'));
+                          handleInputChange('moveInDate', new Date(selectedDate).toISOString());
                         }
+                        setMoveInOpen(false);
                       }}
                       disabled={(date) => date < new Date()}
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
+                {/* Native date input fallback */}
+                <div className="mt-2">
+                  <Input
+                    type="date"
+                    value={formData.moveInDate ? new Date(formData.moveInDate).toISOString().split('T')[0] : ''}
+                    onChange={(e) => {
+                      const v = e.target.value; // yyyy-MM-dd
+                      if (v) {
+                        const d = new Date(v);
+                        setMoveInDate(d);
+                        handleInputChange('moveInDate', d.toISOString());
+                      } else {
+                        setMoveInDate(undefined);
+                        handleInputChange('moveInDate', '');
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -385,11 +460,11 @@ export function PostRoommateRequest() {
                       <SelectValue placeholder="Select work schedule" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="standard">Standard office hours (9-5)</SelectItem>
+                      <SelectItem value="9-5">Standard office hours (9-5)</SelectItem>
                       <SelectItem value="flexible">Flexible hours</SelectItem>
-                      <SelectItem value="remote">Work from home</SelectItem>
-                      <SelectItem value="shifts">Shift work</SelectItem>
+                      <SelectItem value="night-shift">Night shift</SelectItem>
                       <SelectItem value="student">Student</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -400,10 +475,9 @@ export function PostRoommateRequest() {
                       <SelectValue placeholder="Select sleep schedule" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="early">Early bird (bed by 10pm)</SelectItem>
-                      <SelectItem value="normal">Normal (bed by 11-12pm)</SelectItem>
-                      <SelectItem value="night">Night owl (bed after 12pm)</SelectItem>
-                      <SelectItem value="varies">Varies</SelectItem>
+                      <SelectItem value="early-bird">Early bird (bed by 10pm)</SelectItem>
+                      <SelectItem value="flexible">Normal / Varies</SelectItem>
+                      <SelectItem value="night-owl">Night owl (bed after 12am)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

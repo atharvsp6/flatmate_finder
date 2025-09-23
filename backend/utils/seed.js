@@ -6,6 +6,7 @@ import User from '../models/User.js';
 import Listing from '../models/Listing.js';
 import Booking from '../models/Booking.js';
 import RoommateRequest from '../models/RoommateRequest.js';
+import Review from '../models/Review.js';
 
 // Load environment variables robustly (backend/.env or project root .env)
 (() => {
@@ -146,10 +147,11 @@ const seedData = async () => {
 
     // Clear existing data
     console.log('🗑️  Clearing existing data...');
-    await User.deleteMany({});
-    await Listing.deleteMany({});
-    await Booking.deleteMany({});
-    await RoommateRequest.deleteMany({});
+  await User.deleteMany({});
+  await Listing.deleteMany({});
+  await Booking.deleteMany({});
+  await RoommateRequest.deleteMany({});
+  await Review.deleteMany({});
 
     // Create users
     console.log('👥 Creating users...');

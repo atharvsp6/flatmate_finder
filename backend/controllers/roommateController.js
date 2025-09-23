@@ -16,7 +16,7 @@ export const getRoommateRequests = async (req, res) => {
       search 
     } = req.query;
 
-    const query = { isActive: true };
+  const query = { isActive: true };
     
     // Add filters
     if (location) {
@@ -41,6 +41,11 @@ export const getRoommateRequests = async (req, res) => {
     
     if (search) {
       query.$text = { $search: search };
+    }
+
+    // If authenticated, exclude the current user's own active requests from the public feed
+    if (req.user && req.user._id) {
+      query.user = { $ne: req.user._id };
     }
 
     // Execute query with pagination

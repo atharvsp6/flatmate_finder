@@ -11,6 +11,7 @@ import { RoommatesListing } from './components/RoommatesListing';
 import { RoommateProfile } from './components/RoommateProfile';
 import { PostRoommateRequest } from './components/PostRoommateRequest';
 import { Navbar } from './components/Navbar';
+import { CreateListing } from './components/CreateListing';
 import apiService from './services/api';
 
 // Auth Context
@@ -126,6 +127,7 @@ function App() {
             <Route path="/profile" element={isAuthenticated ? <UserProfile /> : <Navigate to="/auth" />} />
             <Route path="/listings" element={<Listings />} />
             <Route path="/listing/:id" element={<ListingDetails />} />
+            <Route path="/create-listing" element={isAuthenticated ? <CreateListing /> : <Navigate to="/auth" />} />
             <Route path="/booking/:id" element={isAuthenticated ? <Booking /> : <Navigate to="/auth" />} />
             <Route path="/my-bookings" element={isAuthenticated ? <MyBookings /> : <Navigate to="/auth" />} />
             <Route path="/roommates" element={<RoommatesListing />} />

@@ -7,6 +7,7 @@ import {
   updateListing,
   deleteListing
 } from '../controllers/listingController.js';
+import { getReviewsForListing, createReview, updateReview, deleteReview } from '../controllers/reviewController.js';
 import { protect } from '../middleware/auth.js';
 import { handleValidationErrors } from '../middleware/validation.js';
 
@@ -56,5 +57,17 @@ router.get('/:id', getListing);
 router.post('/', protect, listingValidation, handleValidationErrors, createListing);
 router.put('/:id', protect, updateListing);
 router.delete('/:id', protect, deleteListing);
+
+// Reviews nested routes
+router.get('/:id/reviews', getReviewsForListing);
+router.post('/:id/reviews', protect, [
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+  body('comment').optional().isLength({ max: 1000 }).withMessage('Comment too long')
+], handleValidationErrors, createReview);
+router.put('/:id/reviews/:reviewId', protect, [
+  body('rating').optional().isInt({ min: 1, max: 5 }),
+  body('comment').optional().isLength({ max: 1000 })
+], handleValidationErrors, updateReview);
+router.delete('/:id/reviews/:reviewId', protect, deleteReview);
 
 export default router;

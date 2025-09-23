@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ImageWithFallback } from './assets/ImageWithFallback';
+import apiService from '../services/api';
 import { 
   Calendar,
   Clock,
@@ -18,68 +19,24 @@ import {
   Eye
 } from 'lucide-react';
 
-const mockBookings = [
-  {
-    id: 1,
-    listingId: 1,
-    listingTitle: "Modern 2-Bed Apartment in Central London",
-    listingImage: "https://images.unsplash.com/photo-1559329146-807aff9ff1fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhcGFydG1lbnQlMjBleHRlcmlvcnxlbnwxfHx8fDE3NTY1NjczNzl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    location: "Camden, London",
-    price: 950,
-    viewingDate: "2024-03-15",
-    viewingTime: "14:00",
-    status: "confirmed",
-    landlordName: "Sarah Wilson",
-    landlordPhone: "+44 7123 456789",
-    bookingDate: "2024-02-28",
-    message: "Looking forward to seeing the property!"
-  },
-  {
-    id: 2,
-    listingId: 2,
-    listingTitle: "Cozy Bedroom in Shared House",
-    listingImage: "https://images.unsplash.com/photo-1633104069776-ea7e61258ec9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcGFydG1lbnQlMjBiZWRyb29tfGVufDF8fHx8MTc1NjU2NzM4Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    location: "Shoreditch, London",
-    price: 720,
-    viewingDate: "2024-03-10",
-    viewingTime: "10:00",
-    status: "pending",
-    landlordName: "Alex Johnson",
-    landlordPhone: "+44 7987 654321",
-    bookingDate: "2024-03-01"
-  },
-  {
-    id: 3,
-    listingId: 3,
-    listingTitle: "Victorian House Share",
-    listingImage: "https://images.unsplash.com/photo-1657084031100-6925483d8a7a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzaGFyZWQlMjBhcGFydG1lbnQlMjBraXRjaGVufGVufDF8fHx8MTc1NjU2NzM4NHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    location: "Clapham, London",
-    price: 850,
-    viewingDate: "2024-02-20",
-    viewingTime: "16:00",
-    status: "completed",
-    landlordName: "Emma Davis",
-    landlordPhone: "+44 7456 123789",
-    bookingDate: "2024-02-15"
-  },
-  {
-    id: 4,
-    listingId: 4,
-    listingTitle: "Studio Apartment Near University",
-    listingImage: "https://images.unsplash.com/photo-1559329146-807aff9ff1fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhcGFydG1lbnQlMjBleHRlcmlvcnxlbnwxfHx8fDE3NTY1NjczNzl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    location: "Bloomsbury, London",
-    price: 900,
-    viewingDate: "2024-02-18",
-    viewingTime: "11:00",
-    status: "cancelled",
-    landlordName: "Mike Thompson",
-    landlordPhone: "+44 7321 987654",
-    bookingDate: "2024-02-10"
-  }
-];
-
 export function MyBookings() {
-  const [bookings] = useState(mockBookings);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await apiService.getBookings();
+        if (res.success) setBookings(res.data);
+      } catch (e) {
+        setError(e.message || 'Failed to load bookings');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -111,14 +68,8 @@ export function MyBookings() {
     }
   };
 
-  const filterBookings = (status) => {
-    if (!status) return bookings;
-    return bookings.filter(booking => booking.status === status);
-  };
-
-  const upcomingBookings = filterBookings('confirmed').filter(
-    booking => new Date(booking.viewingDate) >= new Date()
-  );
+  const filterBookings = (status) => (status ? bookings.filter(b => b.status === status) : bookings);
+  const upcomingBookings = filterBookings('confirmed').filter(b => new Date(b.viewingDate) >= new Date());
   const pendingBookings = filterBookings('pending');
   const pastBookings = [...filterBookings('completed'), ...filterBookings('cancelled')];
 
@@ -132,21 +83,21 @@ export function MyBookings() {
   };
 
   const BookingCard = ({ booking }) => (
-    <Card key={booking.id} className="mb-4">
+    <Card key={booking._id} className="mb-4">
       <CardContent className="pt-6">
         <div className="flex flex-col md:flex-row gap-4">
           <ImageWithFallback
-            src={booking.listingImage}
-            alt={booking.listingTitle}
+            src={booking.listing?.images?.[0]}
+            alt={booking.listing?.title}
             className="w-full md:w-32 h-32 object-cover rounded-lg"
           />
           <div className="flex-1">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <h3 className="font-medium text-foreground mb-1">{booking.listingTitle}</h3>
+                <h3 className="font-medium text-foreground mb-1">{booking.listing?.title}</h3>
                 <div className="flex items-center text-muted-foreground mb-2">
                   <MapPin className="h-4 w-4 mr-1" />
-                  <span className="text-sm">{booking.location}</span>
+                  <span className="text-sm">{booking.listing?.location}</span>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -171,10 +122,10 @@ export function MyBookings() {
               <div className="space-y-2">
                 <div className="flex items-center text-muted-foreground">
                   <Phone className="h-4 w-4 mr-2" />
-                  <span className="text-sm">{booking.landlordName}</span>
+                  <span className="text-sm">{booking.user?.name}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="font-medium">£{booking.price}</span>
+                  <span className="font-medium">₹{booking.listing?.price}</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </div>
@@ -191,7 +142,7 @@ export function MyBookings() {
 
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm">
-                <Link to={`/listing/${booking.listingId}`}>
+                <Link to={`/listing/${booking.listing?._id}`}>
                   <Eye className="h-4 w-4 mr-1" />
                   View Listing
                 </Link>
@@ -211,7 +162,20 @@ export function MyBookings() {
               )}
               
               {booking.status === 'pending' && (
-                <Button variant="destructive" size="sm">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const res = await apiService.cancelBooking(booking._id);
+                      if (res.success) {
+                        setBookings(prev => prev.map(b => (b._id === booking._id ? res.data : b)));
+                      }
+                    } catch (e) {
+                      alert(e.message || 'Failed to cancel');
+                    }
+                  }}
+                >
                   Cancel Request
                 </Button>
               )}

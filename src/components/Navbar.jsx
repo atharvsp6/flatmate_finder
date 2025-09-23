@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { useAuth } from '../App';
 import { Home, Search, Users, Calendar, User, LogOut, Plus } from 'lucide-react';
@@ -13,6 +13,15 @@ import {
 export function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      navigate('/auth');
+    }
+  };
 
   const navItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -79,26 +88,32 @@ export function Navbar() {
           {/* Auth Section */}
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
-                    <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">{user?.name || 'Profile'}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center space-x-2">
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center space-x-2">
                       <User className="h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout} className="flex items-center space-x-2">
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                      <span className="hidden sm:inline">{user?.name || 'Profile'}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center space-x-2">
+                        <User className="h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="flex items-center space-x-2">
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="outline" onClick={handleLogout} className="inline-flex items-center space-x-2">
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </Button>
+              </>
             ) : (
               <Button asChild>
                 <Link to="/auth">Login / Sign Up</Link>
@@ -128,6 +143,13 @@ export function Navbar() {
                   </Link>
                 );
               })}
+              {/* Mobile Logout button */}
+              <button
+                onClick={handleLogout}
+                className="flex flex-col items-center py-2 px-3 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
             </div>
           </div>
         )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,6 +9,7 @@ import { Slider } from './ui/slider';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ImageWithFallback } from './assets/ImageWithFallback';
+import apiService from '../services/api';
 import { 
   Search, 
   MapPin, 
@@ -21,115 +22,52 @@ import {
   Clock
 } from 'lucide-react';
 
-const mockRoommates = [
-  {
-    "id": 1,
-    "name": "Priya Sharma",
-    "age": 26,
-    "occupation": "Marketing Manager",
-    "bio": "Friendly professional looking for a clean, social flatmate. Love cooking and exploring cafes on weekends!",
-    "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjB3b21hbiUyMHByb2Zlc3Npb25hbHxlbnwxfHx8fDE3OTM1Njc2MDJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    "location": "Bandra, Mumbai",
-    "budget": [30000, 45000],
-    "moveInDate": "2025-10-01",
-    "roomType": "Private Room",
-    "lifestyle": {
-      "cleanliness": 4,
-      "socialLevel": 4,
-      "smoking": false,
-      "pets": false
-    },
-    "interests": ["Cooking", "Yoga", "Reading", "Travel"],
-    "rating": 4.8,
-    "responseRate": 95,
-    "lastActive": "3 hours ago",
-    "verified": true,
-    "postedDate": "2025-08-25"
-  },
-  {
-    "id": 2,
-    "name": "Rohan Verma",
-    "age": 24,
-    "occupation": "Software Developer",
-    "bio": "Quiet developer seeking a peaceful environment for coding. I am clean, respectful, and keep to myself mostly.",
-    "avatar": "https://images.unsplash.com/photo-1615109398623-88346a601842?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBtYW4lMjBzb2Z0d2FyZSUyMGRldmVsb3BlcnxlbnwxfHx8fDE3OTM1Mzk3MjV8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    "location": "Andheri, Mumbai",
-    "budget": [25000, 40000],
-    "moveInDate": "2025-10-15",
-    "roomType": "Private Room",
-    "lifestyle": {
-      "cleanliness": 5,
-      "socialLevel": 2,
-      "smoking": false,
-      "pets": true
-    },
-    "interests": ["Gaming", "Technology", "Music", "Coffee"],
-    "rating": 4.9,
-    "responseRate": 88,
-    "lastActive": "2 days ago",
-    "verified": true,
-    "postedDate": "2025-08-22"
-  },
-  {
-    "id": 3,
-    "name": "Aisha Khan",
-    "age": 29,
-    "occupation": "Graphic Designer",
-    "bio": "Creative professional who loves art, music, and hosting dinner parties. Looking for a friendly and open-minded flatmate!",
-    "avatar": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBncmFwaGljJTIwZGVzaWduZXJ8ZW58MXx8fHwxNzkzNTY3NjAzfDA&ixlib=rb-4.1.0&q=80&w=1080",
-    "location": "Koregaon Park, Pune",
-    "budget": [20000, 35000],
-    "moveInDate": "2025-09-20",
-    "roomType": "Private Room",
-    "lifestyle": {
-      "cleanliness": 4,
-      "socialLevel": 5,
-      "smoking": false,
-      "pets": false
-    },
-    "interests": ["Art", "Music", "Cooking", "Photography"],
-    "rating": 4.7,
-    "responseRate": 92,
-    "lastActive": "6 hours ago",
-    "verified": true,
-    "postedDate": "2025-08-18"
-  },
-  {
-    "id": 4,
-    "name": "Sameer Joshi",
-    "age": 27,
-    "occupation": "Teacher",
-    "bio": "Friendly teacher looking for a shared space in the city. I enjoy cricket, reading, and quiet evenings after work.",
-    "avatar": "https://images.unsplash.com/photo-1609423478893-90a6f4a833d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBtYWxlJTIwdGVhY2hlcnxlbnwxfHx8fDE3OTM1Mzk3MjV8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    "location": "Dadar, Mumbai",
-    "budget": [15000, 25000],
-    "moveInDate": "2025-09-10",
-    "roomType": "Shared Room",
-    "lifestyle": {
-      "cleanliness": 4,
-      "socialLevel": 3,
-      "smoking": false,
-      "pets": false
-    },
-    "interests": ["Cricket", "Reading", "Movies", "Trekking"],
-    "rating": 4.6,
-    "responseRate": 85,
-    "lastActive": "4 days ago",
-    "verified": false,
-        "postedDate": "2025-08-28"
-  }
-];
-
 export function RoommatesListing() {
-  const [roommates, setRoommates] = useState(mockRoommates);
+  const [roommates, setRoommates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  // Dynamic budget bounds derived from data
+  const [budgetBounds, setBudgetBounds] = useState({ min: 0, max: 100000 });
   const [filters, setFilters] = useState({
     search: '',
     location: 'all',
-    budgetRange: [15000, 50000],
+    budgetRange: [0, 100000],
     roomType: 'all',
     age: 'all'
   });
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
   const [savedRoommates, setSavedRoommates] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await apiService.getRoommateRequests();
+        if (res.success) {
+          const data = Array.isArray(res.data) ? res.data : [];
+          setRoommates(data);
+          // Compute dynamic budget bounds
+          if (data.length > 0) {
+            const mins = data.map(r => (r?.budget?.min ?? undefined)).filter(n => typeof n === 'number');
+            const maxs = data.map(r => (r?.budget?.max ?? undefined)).filter(n => typeof n === 'number');
+            if (mins.length && maxs.length) {
+              const min = Math.min(...mins);
+              const max = Math.max(...maxs);
+              setBudgetBounds({ min, max });
+              if (!filtersInitialized) {
+                setFilters(prev => ({ ...prev, budgetRange: [min, max] }));
+                setFiltersInitialized(true);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        setError(e.message || 'Failed to load roommate requests');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const handleFilterChange = (key, value) => {
     setFilters({ ...filters, [key]: value });
@@ -143,19 +81,17 @@ export function RoommatesListing() {
     );
   };
 
-  const filteredRoommates = roommates.filter(roommate => {
-    const matchesSearch = roommate.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-                         roommate.occupation.toLowerCase().includes(filters.search.toLowerCase()) ||
-                         roommate.bio.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesLocation = filters.location === 'all' || roommate.location.includes(filters.location);
-    const matchesBudget = roommate.budget[1] >= filters.budgetRange[0] && roommate.budget[0] <= filters.budgetRange[1];
-    const matchesRoomType = filters.roomType === 'all' || roommate.roomType.toLowerCase().includes(filters.roomType);
-    const matchesAge = filters.age === 'all' || 
-                      (filters.age === '18-25' && roommate.age >= 18 && roommate.age <= 25) ||
-                      (filters.age === '26-30' && roommate.age >= 26 && roommate.age <= 30) ||
-                      (filters.age === '31+' && roommate.age >= 31);
-
-    return matchesSearch && matchesLocation && matchesBudget && matchesRoomType && matchesAge;
+  const filteredRoommates = roommates.filter(req => {
+    const userName = (req.user?.name || '').toLowerCase();
+    const matchesSearch = userName.includes(filters.search.toLowerCase()) || (req.bio || '').toLowerCase().includes(filters.search.toLowerCase()) || (req.title || '').toLowerCase().includes(filters.search.toLowerCase());
+    const matchesLocation = filters.location === 'all' || (req.location || '').toLowerCase().includes(filters.location.toLowerCase());
+    const min = req.budget?.min; const max = req.budget?.max;
+    // If budget is missing or malformed, don't exclude the item by budget
+    const matchesBudget = (typeof min !== 'number' || typeof max !== 'number')
+      ? true
+      : (max >= filters.budgetRange[0] && min <= filters.budgetRange[1]);
+    const matchesRoomType = filters.roomType === 'all' || (req.roomType || '').toLowerCase().includes(filters.roomType);
+    return matchesSearch && matchesLocation && matchesBudget && matchesRoomType;
   });
 
   const formatMoveInDate = (dateString) => {
@@ -171,12 +107,21 @@ export function RoommatesListing() {
     return 'text-muted-foreground';
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">Loading roommate requests...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-muted/30 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-medium text-foreground">Find Roommates</h1>
           <p className="text-muted-foreground">Connect with potential flatmates in your area</p>
+          {error && <p className="text-destructive mt-2">{error}</p>}
         </div>
 
         {/* Filters */}
@@ -216,20 +161,20 @@ export function RoommatesListing() {
 
               {/* Budget Range */}
               <div className="space-y-2">
-                <Label>Budget Range (₹/month)</Label>
+                <Label>Budget Range (/month)</Label>
                 <div className="px-3">
                   <Slider
                     value={filters.budgetRange}
                     onValueChange={(value) => handleFilterChange('budgetRange', value)}
-                    max={50000}
-                    min={15000}
-                    step={5000}
+                    max={budgetBounds.max}
+                    min={budgetBounds.min}
+                    step={Math.max(1, Math.round((budgetBounds.max - budgetBounds.min) / 20))}
                     className="w-full"
                   />
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>₹{filters.budgetRange[0]}</span>
-                  <span>₹{filters.budgetRange[1]}</span>
+                  <span>{filters.budgetRange[0]}</span>
+                  <span>{filters.budgetRange[1]}</span>
                 </div>
               </div>
 
@@ -289,39 +234,39 @@ export function RoommatesListing() {
         {/* Roommates Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRoommates.map((roommate) => (
-            <Card key={roommate.id} className="group hover:shadow-lg transition-shadow">
+            <Card key={roommate._id} className="group hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={roommate.avatar} />
-                        <AvatarFallback>{roommate.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarImage src={roommate.user?.avatar} />
+                        <AvatarFallback>{(roommate.user?.name || 'U N').split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
-                      {roommate.verified && (
+                      {roommate.user?.verified && (
                         <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center">
                           <Star className="h-3 w-3 fill-current" />
                         </div>
                       )}
                     </div>
                     <div>
-                      <h3 className="font-medium text-foreground">{roommate.name}</h3>
-                      <p className="text-sm text-muted-foreground">{roommate.age} years old</p>
+                      <h3 className="font-medium text-foreground">{roommate.user?.name}</h3>
+                      <p className="text-sm text-muted-foreground">{roommate.title}</p>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={savedRoommates.includes(roommate.id) ? 'text-red-500' : 'text-muted-foreground'}
-                    onClick={() => toggleSaved(roommate.id)}
+                    className={savedRoommates.includes(roommate._id) ? 'text-red-500' : 'text-muted-foreground'}
+                    onClick={() => toggleSaved(roommate._id)}
                   >
-                    <Heart className={`h-4 w-4 ${savedRoommates.includes(roommate.id) ? 'fill-current' : ''}`} />
+                    <Heart className={`h-4 w-4 ${savedRoommates.includes(roommate._id) ? 'fill-current' : ''}`} />
                   </Button>
                 </div>
 
                 <div className="space-y-3 mb-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground">{roommate.occupation}</p>
+                    <p className="text-sm font-medium text-foreground">Looking for: {roommate.roomType}</p>
                     <div className="flex items-center text-muted-foreground mt-1">
                       <MapPin className="h-3 w-3 mr-1" />
                       <span className="text-xs">{roommate.location}</span>
@@ -333,7 +278,7 @@ export function RoommatesListing() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Budget:</span>
-                      <span className="font-medium">₹{roommate.budget[0]}-₹{roommate.budget[1]}/mo</span>
+                      <span className="font-medium">₹{roommate.budget?.min}-₹{roommate.budget?.max}/mo</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Move-in:</span>
@@ -348,40 +293,25 @@ export function RoommatesListing() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1">
-                    {roommate.interests.slice(0, 3).map((interest) => (
-                      <Badge key={interest} variant="secondary" className="text-xs">
-                        {interest}
-                      </Badge>
-                    ))}
-                    {roommate.interests.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{roommate.interests.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
-                        <span>{roommate.rating}</span>
-                      </div>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground">{roommate.responseRate}% response</span>
+                  {Array.isArray(roommate.interests) && (
+                    <div className="flex flex-wrap gap-1">
+                      {roommate.interests.slice(0, 3).map((interest) => (
+                        <Badge key={interest} variant="secondary" className="text-xs">
+                          {interest}
+                        </Badge>
+                      ))}
+                      {roommate.interests.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{roommate.interests.length - 3}
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="h-3 w-3" />
-                      <span className={getLastActiveColor(roommate.lastActive)}>
-                        {roommate.lastActive}
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="flex space-x-2">
                   <Button asChild size="sm" className="flex-1">
-                    <Link to={`/roommate/${roommate.id}`}>View Profile</Link>
+                    <Link to={`/roommate/${roommate._id}`}>View Profile</Link>
                   </Button>
                   <Button variant="outline" size="sm">
                     <MessageSquare className="h-4 w-4" />
@@ -402,7 +332,7 @@ export function RoommatesListing() {
               onClick={() => setFilters({
                 search: '',
                 location: 'all',
-                budgetRange: [15000, 50000],
+                budgetRange: [budgetBounds.min, budgetBounds.max],
                 roomType: 'all',
                 age: 'all'
               })}

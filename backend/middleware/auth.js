@@ -61,3 +61,25 @@ export const authorize = (...roles) => {
     next();
   };
 };
+
+// Optional auth middleware: sets req.user if a valid token is present, otherwise continues without error
+export const optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token) {
+      return next();
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
+    const user = await User.findById(decoded.id);
+    if (user) {
+      req.user = user.getPublicProfile();
+    }
+    return next();
+  } catch (err) {
+    // Ignore token errors and proceed as unauthenticated
+    return next();
+  }
+};

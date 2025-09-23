@@ -8,7 +8,7 @@ import {
   deleteRoommateRequest,
   getMyRoommateRequests
 } from '../controllers/roommateController.js';
-import { protect } from '../middleware/auth.js';
+import { protect, optionalAuth } from '../middleware/auth.js';
 import { handleValidationErrors } from '../middleware/validation.js';
 
 const router = express.Router();
@@ -68,7 +68,7 @@ const validateBudgetRange = (req, res, next) => {
 };
 
 // Routes
-router.get('/', getRoommateRequests);
+router.get('/', optionalAuth, getRoommateRequests);
 router.get('/my-requests', protect, getMyRoommateRequests);
 router.get('/:id', getRoommateRequest);
 router.post('/', protect, roommateRequestValidation, handleValidationErrors, validateBudgetRange, createRoommateRequest);

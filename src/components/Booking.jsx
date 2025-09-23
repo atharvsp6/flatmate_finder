@@ -30,6 +30,7 @@ export function Booking() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [date, setDate] = useState();
+  const [dateOpen, setDateOpen] = useState(false);
   const [listing, setListing] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -179,17 +180,18 @@ export function Booking() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Preferred Date</Label>
-                      <Popover>
+                      <Popover open={dateOpen} onOpenChange={setDateOpen}>
                         <PopoverTrigger asChild>
                           <Button
+                            type="button"
                             variant="outline"
                             className="w-full justify-start text-left font-normal"
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                             {date ? format(date, "PPP") : <span>Pick a date</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                        <PopoverContent className="!z-[9999] w-auto p-0">
                           <Calendar
                             mode="single"
                             selected={date}
@@ -198,12 +200,31 @@ export function Booking() {
                               if (selectedDate) {
                                 handleInputChange('viewingDate', format(selectedDate, 'yyyy-MM-dd'));
                               }
+                              setDateOpen(false);
                             }}
                             disabled={(date) => date < new Date()}
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
+                      {/* Native fallback for viewing date */}
+                      <div className="mt-2">
+                        <Input
+                          type="date"
+                          value={bookingData.viewingDate}
+                          onChange={(e) => {
+                            const v = e.target.value; // yyyy-MM-dd
+                            if (v) {
+                              const d = new Date(v);
+                              setDate(d);
+                              handleInputChange('viewingDate', v);
+                            } else {
+                              setDate(undefined);
+                              handleInputChange('viewingDate', '');
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Preferred Time</Label>
@@ -316,7 +337,7 @@ export function Booking() {
             <Card>
               <CardContent className="pt-6">
                 <ImageWithFallback
-                  src={listing.image}
+                  src={listing.images?.[0]}
                   alt={listing.title}
                   className="w-full h-48 object-cover rounded-lg mb-4"
                 />
@@ -326,7 +347,7 @@ export function Booking() {
                   <span className="text-sm">{listing.location}</span>
                 </div>
                 <div className="text-center mb-4">
-                  <span className="text-2xl font-medium text-foreground">£{listing.price}</span>
+                  <span className="text-2xl font-medium text-foreground">₹{listing.price}</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
               </CardContent>
@@ -376,12 +397,12 @@ export function Booking() {
               <CardContent>
                 <div className="flex items-center space-x-3">
                   <ImageWithFallback
-                    src={listing.landlord.avatar}
-                    alt={listing.landlord.name}
+                    src={listing.landlord?.avatar}
+                    alt={listing.landlord?.name}
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   <div>
-                    <p className="font-medium">{listing.landlord.name}</p>
+                    <p className="font-medium">{listing.landlord?.name}</p>
                     <p className="text-sm text-muted-foreground">Property Host</p>
                   </div>
                 </div>
