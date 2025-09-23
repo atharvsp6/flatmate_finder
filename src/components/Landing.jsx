@@ -90,7 +90,7 @@ export function Landing() {
             </div>
             <div className="relative">
               <ImageWithFallback
-                src="src/components/assets/flat image hero.png"
+                src="/landing-hero.png"
                 alt="Modern apartment living room"
                 className="rounded-2xl shadow-2xl w-full h-[400px] object-cover"
               />
