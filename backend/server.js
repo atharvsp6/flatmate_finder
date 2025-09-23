@@ -109,6 +109,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Flatmate Finder API is running!' });
 });
 
+//uptime bot ping route
+app.get('/ping', (req, res) => {
+  res.status(200).send('OK');
+});
+
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
