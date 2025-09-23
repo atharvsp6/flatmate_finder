@@ -1,11 +1,31 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 import User from '../models/User.js';
 import Listing from '../models/Listing.js';
 import Booking from '../models/Booking.js';
 import RoommateRequest from '../models/RoommateRequest.js';
 
-dotenv.config();
+// Load environment variables robustly (backend/.env or project root .env)
+(() => {
+  let loaded = false;
+  const backendEnvPath = path.resolve(process.cwd(), '.env');
+  if (fs.existsSync(backendEnvPath)) {
+    dotenv.config({ path: backendEnvPath });
+    loaded = true;
+  }
+  if (!loaded || (!process.env.MONGODB_URI && !process.env.PORT)) {
+    const parentEnvPath = path.resolve(process.cwd(), '..', '.env');
+    if (fs.existsSync(parentEnvPath)) {
+      dotenv.config({ path: parentEnvPath });
+      loaded = true;
+    }
+  }
+  if (!loaded) {
+    dotenv.config();
+  }
+})();
 
 // Sample data
 const users = [
